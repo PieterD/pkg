@@ -5,8 +5,7 @@ import (
 	"fmt"
 	"hash/crc32"
 
-	"github.com/PieterD/debbie/panic"
-	"github.com/pkg/errors"
+	"github.com/PieterD/pkg/panic"
 )
 
 const (
@@ -47,7 +46,7 @@ func (d *Decoder) Buffer() []byte {
 
 func (d *Decoder) Available(fun, field string, num int) []byte {
 	if d.pos+num > len(d.buf) {
-		panic.Panic(errors.Errorf("%s(%s) not enough bytes, needed %d", fun, field, num))
+		panic.Panic(fmt.Errorf("%s(%s) not enough bytes, needed %d", fun, field, num))
 	}
 	return d.buf[d.pos : d.pos+num]
 }
@@ -88,9 +87,9 @@ func (d *Decoder) Uint64(field string) uint64 {
 func (d *Decoder) VarInt(field string) int {
 	i := d.VarInt64(field)
 	if i > maxInt {
-		panic.Panic(errors.Errorf("VarInt(%s) %d too large (>%d) for int", field, i, maxInt))
+		panic.Panic(fmt.Errorf("VarInt(%s) %d too large (>%d) for int", field, i, maxInt))
 	} else if i < minInt {
-		panic.Panic(errors.Errorf("VarInt(%s) %d too small (<%d) for int", field, i, minInt))
+		panic.Panic(fmt.Errorf("VarInt(%s) %d too small (<%d) for int", field, i, minInt))
 	}
 	return int(i)
 }
@@ -98,10 +97,10 @@ func (d *Decoder) VarInt(field string) int {
 func (d *Decoder) VarInt64(field string) int64 {
 	i, n := binary.Varint(d.Buffer())
 	if n == 0 {
-		panic.Panic(errors.Errorf("VarInt64(%s) buffer too small", field))
+		panic.Panic(fmt.Errorf("VarInt64(%s) buffer too small", field))
 	}
 	if n < 0 {
-		panic.Panic(errors.Errorf("VarInt64(%s) overflow(%d)", field, n))
+		panic.Panic(fmt.Errorf("VarInt64(%s) overflow(%d)", field, n))
 	}
 	d.Advance("VarInt64", field, n)
 	return i
@@ -110,10 +109,10 @@ func (d *Decoder) VarInt64(field string) int64 {
 func (d *Decoder) VarUint64(field string) uint64 {
 	i, n := binary.Uvarint(d.Buffer())
 	if n == 0 {
-		panic.Panic(errors.Errorf("VarInt64(%s) buffer too small", field))
+		panic.Panic(fmt.Errorf("VarInt64(%s) buffer too small", field))
 	}
 	if n < 0 {
-		panic.Panic(errors.Errorf("VarInt64(%s) overflow(%d)", field, n))
+		panic.Panic(fmt.Errorf("VarInt64(%s) overflow(%d)", field, n))
 	}
 	d.Advance("VarUint64", field, n)
 	return i
@@ -136,6 +135,6 @@ func (d *Decoder) CheckCRC(field string) {
 	got := crc32.ChecksumIEEE(d.buf[d.crcPos:d.pos])
 	want := d.Uint32(field)
 	if want != got {
-		panic.Panic(errors.Wrapf(ErrInvalidCRC, "CheckCRC(%s) invalid crc", field))
+		panic.Panic(fmt.Errorf("invalid crc on field %s: %w", field, ErrInvalidCRC))
 	}
 }
