@@ -33,6 +33,12 @@ func (lock *Lock) LockCtx(ctx context.Context) error {
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
+	default:
+	}
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
 	case lock.c <- lock.f:
 		return nil
 	}
