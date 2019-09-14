@@ -12,6 +12,7 @@ type (
 		next           uint64
 		cache          map[uint64]struct{}
 		returning      bool
+		deal           chan struct{}
 		returnAll      chan struct{}
 		closeWhenEmpty chan struct{}
 	}
@@ -29,8 +30,11 @@ var (
 func NewDealer() *Dealer {
 	closeWhenEmpty := make(chan struct{})
 	close(closeWhenEmpty)
+	deal := make(chan struct{})
+	close(deal)
 	return &Dealer{
 		cache:          make(map[uint64]struct{}),
+		deal:           deal,
 		returnAll:      make(chan struct{}),
 		closeWhenEmpty: closeWhenEmpty,
 	}
@@ -58,6 +62,13 @@ func (dealer *Dealer) Get() (*Token, error) {
 	}, nil
 }
 
+func (dealer *Dealer) Dealing() <-chan struct{} {
+	dealer.lock.Lock()
+	defer dealer.lock.Unlock()
+
+	return dealer.deal
+}
+
 func (dealer *Dealer) ReturnAllTokens(ctx context.Context) error {
 	if ctx == nil {
 		ctx = context.Background()
@@ -73,6 +84,7 @@ func (dealer *Dealer) ReturnAllTokens(ctx context.Context) error {
 	if !dealer.returning {
 		dealer.returning = true
 		close(dealer.returnAll)
+		dealer.deal = make(chan struct{})
 	}
 
 	cwe := dealer.closeWhenEmpty
@@ -108,7 +120,6 @@ func (dealer *Dealer) Reset(ctx context.Context) error {
 
 	var (
 		returning      bool
-		returnAll      <-chan struct{}
 		closeWhenEmpty <-chan struct{}
 	)
 	func() {
@@ -116,17 +127,10 @@ func (dealer *Dealer) Reset(ctx context.Context) error {
 		defer dealer.lock.Unlock()
 
 		returning = dealer.returning
-		returnAll = dealer.returnAll
 		closeWhenEmpty = dealer.closeWhenEmpty
 	}()
 	if !returning {
 		return nil
-	}
-
-	select {
-	default:
-		return nil
-	case <-returnAll:
 	}
 
 	select {
@@ -140,8 +144,10 @@ func (dealer *Dealer) Reset(ctx context.Context) error {
 
 	if dealer.returning {
 		dealer.returning = false
+		close(dealer.deal)
 		dealer.returnAll = make(chan struct{})
 		dealer.closeWhenEmpty = make(chan struct{})
+		close(dealer.closeWhenEmpty)
 	}
 	return nil
 }

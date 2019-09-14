@@ -18,7 +18,25 @@ func isAlive(t *testing.T, toks ...*Token) {
 	}
 }
 
-func TestDealer_DeadContext(t *testing.T) {
+func isDealing(t *testing.T, d *Dealer) {
+	t.Helper()
+	select {
+	case <-d.Dealing():
+	default:
+		t.Fatalf("dealer should be dealing")
+	}
+}
+
+func isNotDealing(t *testing.T, d *Dealer) {
+	t.Helper()
+	select {
+	case <-d.Dealing():
+		t.Fatalf("dealer should not be dealing")
+	default:
+	}
+}
+
+func TestDealer_Immediate(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	d := NewDealer()
@@ -28,11 +46,33 @@ func TestDealer_DeadContext(t *testing.T) {
 	if err := d.ReturnAllTokens(ctx); !errors.Is(err, context.Canceled) {
 		t.Fatalf("expected Canceled error, got: %v", err)
 	}
+	if err := d.ReturnAllTokens(nil); err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	if err := d.Reset(nil); err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	if err := d.Reset(nil); err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	if err := d.ReturnAllTokens(nil); err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	if err := d.Reset(nil); err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	if err := d.ReturnAllTokens(nil); err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	if err := d.Reset(nil); err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
 }
 
 func TestDealer(t *testing.T) {
 	d := NewDealer()
-	ctx, _ := context.WithTimeout(context.Background(), time.Second)
+	isDealing(t, d)
+	ctx, _ := context.WithTimeout(context.Background(), time.Millisecond*100)
 	t1, err := d.Get()
 	if err != nil {
 		t.Fatalf("error getting token 1: %v", err)
@@ -53,23 +93,40 @@ func TestDealer(t *testing.T) {
 		t2.Return()
 		t2.Return()
 	}()
+	isDealing(t, d)
 	if err := d.ReturnAllTokens(ctx); err != nil {
 		t.Fatalf("failed to return all tokens: %v", err)
 	}
+	isNotDealing(t, d)
 	_, err = d.Get()
 	if !errors.Is(err, ErrReturnAll) {
 		t.Fatalf("expected ReturnAll error, got: %v", err)
 	}
+	isNotDealing(t, d)
 	if err := d.Reset(ctx); err != nil {
 		t.Fatalf("failed to reset dealer: %v", err)
 	}
+	isDealing(t, d)
 	if err := d.Reset(ctx); err != nil {
 		t.Fatalf("failed to reset dealer: %v", err)
 	}
+	isDealing(t, d)
+	_, err = d.Get()
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	isDealing(t, d)
 	if err := d.Reset(ctx); err != nil {
 		t.Fatalf("failed to reset dealer: %v", err)
 	}
+	isDealing(t, d)
 	if err := d.ReturnAllTokens(ctx); !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("expected DeadlineExceeded error, got: %v", err)
 	}
+	isNotDealing(t, d)
+	ctx, _ = context.WithTimeout(context.Background(), time.Millisecond*100)
+	if err := d.ReturnAllTokens(ctx); !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("expected DeadlineExceeded error, got: %v", err)
+	}
+	isNotDealing(t, d)
 }
