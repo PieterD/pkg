@@ -40,10 +40,8 @@ func (dealer *Dealer) Get() (*Token, error) {
 	dealer.lock.Lock()
 	defer dealer.lock.Unlock()
 
-	select {
-	case <-dealer.returnAll:
+	if dealer.returning {
 		return nil, fmt.Errorf("preliminary returnAll check: %w", ErrReturnAll)
-	default:
 	}
 
 	if len(dealer.cache) == 0 {
