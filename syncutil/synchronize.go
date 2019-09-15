@@ -24,6 +24,15 @@ func (lock *Lock) Lock() {
 	lock.c <- lock.f
 }
 
+func (lock *Lock) LockTry() bool {
+	select {
+	case lock.c <- lock.f:
+		return true
+	default:
+		return false
+	}
+}
+
 func (lock *Lock) LockCtx(ctx context.Context) error {
 	if ctx == nil {
 		lock.Lock()
