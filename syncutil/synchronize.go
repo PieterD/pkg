@@ -1,6 +1,9 @@
 package syncutil
 
-import "context"
+import (
+	"context"
+	"sync"
+)
 
 type (
 	Lock struct {
@@ -55,4 +58,11 @@ func (lock *Lock) LockCtx(ctx context.Context) error {
 
 func (lock *Lock) Unlock() {
 	<-lock.c
+}
+
+// TempUnlock unlocks the locker, runs f and returns what it returns, and re-locks after f has run.
+func TempUnlock(locker sync.Locker, f func() error) error {
+	locker.Unlock()
+	defer locker.Lock()
+	return f()
 }
