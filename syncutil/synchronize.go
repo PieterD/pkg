@@ -66,3 +66,12 @@ func TempUnlock(locker sync.Locker, f func() error) error {
 	defer locker.Lock()
 	return f()
 }
+
+func UnlockOnce(locker sync.Locker) func() {
+	once := sync.Once{}
+	return func() {
+		once.Do(func() {
+			locker.Unlock()
+		})
+	}
+}
