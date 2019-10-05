@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/PieterD/commando"
+	"github.com/PieterD/pkg/commando"
 )
 
 func main() {
