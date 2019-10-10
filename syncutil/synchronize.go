@@ -60,6 +60,13 @@ func (lock *Lock) Unlock() {
 	<-lock.c
 }
 
+func (lock *Lock) SafeUnlock() {
+	select {
+	case <-lock.c:
+	default:
+	}
+}
+
 // TempUnlock unlocks the locker, runs f and returns what it returns, and re-locks after f has run.
 func TempUnlock(locker sync.Locker, f func() error) error {
 	locker.Unlock()
