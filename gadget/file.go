@@ -7,8 +7,6 @@ import (
 	"go/token"
 	"io"
 	"os"
-
-	"github.com/pkg/errors"
 )
 
 // File contains all the information we have about a parsed Go file.
@@ -57,7 +55,7 @@ func NewFile(path string, reader io.Reader) (*File, error) {
 	if reader == nil {
 		h, err := os.Open(path)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to open file '%s'", path)
+			return nil, fmt.Errorf("failed to open file '%s': %w", path, err)
 		}
 		defer h.Close()
 		reader = h
@@ -68,7 +66,7 @@ func NewFile(path string, reader io.Reader) (*File, error) {
 	fileSet := token.NewFileSet()
 	parsedFile, err := parser.ParseFile(fileSet, path, reader, 0)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse file '%s'", path)
+		return nil, fmt.Errorf("failed to parse file '%s': %w", path, err)
 	}
 
 	for _, decl := range parsedFile.Decls {
@@ -87,7 +85,7 @@ func NewFile(path string, reader io.Reader) (*File, error) {
 				case token.TYPE:
 					typeSpec, ok := spec.(*ast.TypeSpec)
 					if !ok {
-						return nil, errors.Errorf("%s: expected *ast.TypeSpec, got %T", pos, typeSpec)
+						return nil, fmt.Errorf("%s: expected *ast.TypeSpec, got %T", pos, typeSpec)
 					}
 					name := typeSpec.Name.Name
 					var (
@@ -97,12 +95,12 @@ func NewFile(path string, reader io.Reader) (*File, error) {
 					if typeSpec.Assign.IsValid() {
 						alias, err = findTypeAlias(parsedFile, typeSpec.Assign)
 						if err != nil {
-							return nil, errors.Wrapf(err, "%s: failed to parse alias for type '%s'", pos, name)
+							return nil, fmt.Errorf("%s: failed to parse alias for type '%s': %w", pos, name, err)
 						}
 					} else {
 						typ, err = convertTypeSpec(typeSpec.Type)
 						if err != nil {
-							return nil, errors.Wrapf(err, "%s: failed to convert type %s", pos, name)
+							return nil, fmt.Errorf("%s: failed to convert type %s: %w", pos, name, err)
 						}
 					}
 					f.Types = append(f.Types, TypeDecl{
@@ -114,17 +112,17 @@ func NewFile(path string, reader io.Reader) (*File, error) {
 				case token.VAR:
 					varSpec, ok := spec.(*ast.ValueSpec)
 					if !ok {
-						return nil, errors.Errorf("%s: expected *ast.ValueSpec, got %T", pos, varSpec)
+						return nil, fmt.Errorf("%s: expected *ast.ValueSpec, got %T", pos, varSpec)
 					}
 				case token.CONST:
 					varSpec, ok := spec.(*ast.ValueSpec)
 					if !ok {
-						return nil, errors.Errorf("%s: expected *ast.ValueSpec, got %T", pos, varSpec)
+						return nil, fmt.Errorf("%s: expected *ast.ValueSpec, got %T", pos, varSpec)
 					}
 				case token.IMPORT:
 					importSpec, ok := spec.(*ast.ImportSpec)
 					if !ok {
-						return nil, errors.Errorf("%s: expected *ast.ImportSpec, got %T", pos, importSpec)
+						return nil, fmt.Errorf("%s: expected *ast.ImportSpec, got %T", pos, importSpec)
 					}
 					impName := ""
 					if importSpec.Name != nil {
@@ -132,7 +130,7 @@ func NewFile(path string, reader io.Reader) (*File, error) {
 					}
 					impPath, err := asStringLiteral(importSpec.Path)
 					if err != nil {
-						return nil, errors.Wrapf(err, "%s: failed to parse import path", pos)
+						return nil, fmt.Errorf("%s: failed to parse import path: %w", pos, err)
 					}
 					f.Imports = append(f.Imports, ImportDecl{
 						Position: pos,
@@ -145,11 +143,11 @@ func NewFile(path string, reader io.Reader) (*File, error) {
 			recv := ""
 			if decl.Recv != nil && len(decl.Recv.List) != 0 {
 				if len(decl.Recv.List) > 1 {
-					return nil, errors.Errorf("%s: multiple method receivers", pos)
+					return nil, fmt.Errorf("%s: multiple method receivers", pos)
 				}
 				typ, err := convertTypeSpec(decl.Recv.List[0].Type)
 				if err != nil {
-					return nil, errors.Wrapf(err, "%s: failed to convert method receiver type", pos)
+					return nil, fmt.Errorf("%s: failed to convert method receiver type: %w", pos, err)
 				}
 				ptr, ok := typ.(Pointer)
 				if ok {
@@ -157,17 +155,17 @@ func NewFile(path string, reader io.Reader) (*File, error) {
 				}
 				id, ok := typ.(Ident)
 				if !ok {
-					return nil, errors.Errorf("%s: method receiver type is not Identifier or *Identifier", pos)
+					return nil, fmt.Errorf("%s: method receiver type is not Identifier or *Identifier", pos)
 				}
 				recv = id.String()
 			}
 			typ, err := convertTypeSpec(decl.Type)
 			if err != nil {
-				return nil, errors.Wrapf(err, "%s: failed to convert function type", pos)
+				return nil, fmt.Errorf("%s: failed to convert function type: %w", pos, err)
 			}
 			t, ok := typ.(Func)
 			if !ok {
-				return nil, errors.Errorf("%s: function declaration type is somehow not a function type", pos)
+				return nil, fmt.Errorf("%s: function declaration type is somehow not a function type", pos)
 			}
 			f.Funcs = append(f.Funcs, FuncDecl{
 				Position: pos,

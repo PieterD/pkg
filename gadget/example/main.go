@@ -4,8 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/PieterD/gadget"
-	"github.com/pkg/errors"
+	"github.com/PieterD/pkg/gadget"
 )
 
 func main() {
@@ -18,16 +17,16 @@ func main() {
 func run() error {
 	info, err := gadget.Generate()
 	if err != nil {
-		return errors.Wrapf(err, "failed to fetch go generate info")
+		return fmt.Errorf("failed to fetch go generate info: %w", err)
 	}
 	fmt.Printf("%#v\n", info)
 	file, err := info.Open()
 	if err != nil {
-		return errors.Wrapf(err, "failed to open file to generate")
+		return fmt.Errorf("failed to open file to generate: %w", err)
 	}
 	name, typ, err := info.GetType()
 	if err != nil {
-		return errors.Wrapf(err, "failed to get type to generate")
+		return fmt.Errorf("failed to get type to generate: %w", err)
 	}
 	fmt.Printf("name: %s, type: %#v\n", name, typ)
 	fmt.Printf("concise: %s\n", typ)

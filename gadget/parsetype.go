@@ -1,10 +1,9 @@
 package gadget
 
 import (
+	"fmt"
 	"go/parser"
 	"reflect"
-
-	"github.com/pkg/errors"
 )
 
 // ParseType takes a string containing a Go type definition,
@@ -12,11 +11,11 @@ import (
 func ParseType(s string) (Type, error) {
 	e, err := parser.ParseExpr(s)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse expression")
+		return nil, fmt.Errorf("failed to parse expression: %w", err)
 	}
 	t, err := convertTypeSpec(e)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to convert type")
+		return nil, fmt.Errorf("failed to convert type: %w", err)
 	}
 	return t, nil
 }
