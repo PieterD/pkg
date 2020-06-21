@@ -79,6 +79,15 @@ func (e *Encoder) Bytes(b []byte) {
 	e.b = append(e.b, b...)
 }
 
+func (e *Encoder) ByteSlice(b []byte) {
+	e.VarInt(len(b))
+	e.Bytes(b)
+}
+
+func (e *Encoder) String(s string) {
+	e.ByteSlice([]byte(s))
+}
+
 func (e *Encoder) StartCRC() {
 	e.crcPos = len(e.b)
 }

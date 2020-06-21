@@ -126,6 +126,15 @@ func (d *Decoder) Bytes(field string, num int) []byte {
 	return b
 }
 
+func (d *Decoder) ByteSlice(field string) []byte {
+	size := d.VarInt(field)
+	return d.Bytes(field, size)
+}
+
+func (d *Decoder) String(field string) string {
+	return string(d.ByteSlice(field))
+}
+
 func (d *Decoder) StartCRC() {
 	d.crcPos = d.pos
 }
