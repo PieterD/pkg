@@ -23,6 +23,7 @@ func (e *Encoder) Advance(size int) {
 func (e *Encoder) Grow(required int) []byte {
 	if cap(e.b) < len(e.b)+required {
 		e.b = append(e.b, make([]byte, required)...)
+		e.b = e.b[:len(e.b)-required]
 	}
 	return e.b[len(e.b) : len(e.b)+required]
 }
