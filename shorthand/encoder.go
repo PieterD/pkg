@@ -3,7 +3,6 @@ package shorthand
 import (
 	"encoding/binary"
 	"hash/crc32"
-	"sync"
 )
 
 type Encoder struct {
@@ -11,16 +10,10 @@ type Encoder struct {
 	crcPos int
 }
 
-var bytesPool = sync.Pool{New: func() interface{} { return make([]byte, 1024) }}
-
-func NewEncoder() *Encoder {
+func NewEncoder(buf []byte) *Encoder {
 	return &Encoder{
-		b: bytesPool.Get().([]byte)[:0],
+		b: buf,
 	}
-}
-
-func (e *Encoder) Close() {
-	bytesPool.Put(e.b)
 }
 
 func (e *Encoder) Advance(size int) {
